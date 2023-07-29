@@ -55,6 +55,44 @@ Options -Indexes
 	RedirectMatch 403 (?i)/(^$|(wp-)?config|mobiquo|phpinfo|shell|sqlpatch|thumb|thumb_editor|thumbopen|timthumb|webshell)\.php
 </IfModule>
 
+# LFI Bugs Patch
+<IfModule mod_rewrite.c>
+    RewriteCond %{QUERY_STRING} \=(\.\./\.\.//?)+ [OR]
+    RewriteCond %{QUERY_STRING} \=(\.\.//\./?)+ [OR]
+    RewriteCond %{QUERY_STRING} \=(\.\.\\\.\./?)+ [OR]
+    RewriteCond %{QUERY_STRING} \=(\.\.\\\\\./?)+ [OR]
+    RewriteCond %{QUERY_STRING} \/tmp\/sess_ [NC,OR]
+    RewriteCond %{QUERY_STRING} php:\/\/filter\/read=convert\.base64-(en|de)code\/ [NC,OR]
+</IfModule>
+
+# XSS Bugs Patch
+<IfModule mod_rewrite.c>
+    RewriteCond %{QUERY_STRING} base64_encode.*\(.*\) [OR]
+    RewriteCond %{QUERY_STRING} (\<|%3C).*script.*(\>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} (\<|%3C).*iframe.*(\>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} GLOBALS(=|\[|\%[0-9A-Z]{0,2}) [OR]
+    RewriteCond %{QUERY_STRING} _REQUEST(=|\[|\%[0-9A-Z]{0,2})
+    RewriteRule ^(.*)$ index_error.php [F,L]
+    RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK)
+    RewriteRule .* - [F]
+</IfModule>
+
+# SQL Bugs Patch
+<IfModule mod_rewrite.c>
+    RewriteCond %{QUERY_STRING} union([^a]*a)+ll([^s]*s)+elect [NC,OR]
+    RewriteCond %{QUERY_STRING} (order).*(by).*(\%[0-9A-Z]{0,2}) [NC,OR]
+    RewriteCond %{QUERY_STRING} (waitfor|delay|shutdown).*(nowait) [NC,OR]
+    RewriteCond %{QUERY_STRING} (union|and|\^).*(select).*(ascii\(|bin\(|benchmark\(|cast\(|char\(|charset\(|collation\(|concat\(|concat_ws\(|table_schema) [NC,OR]
+    RewriteCond %{QUERY_STRING} (union|and|\^).*(select).*(conv\(|convert\(|count\(|database\(|decode\(|diff\(|distinct\(|elt\(}encode\(|encrypt\(|extract\() [NC,OR]
+    RewriteCond %{QUERY_STRING} (union|and|\^).*(select).*(field\(|floor\(|format\(|from|hex\(|if\(|in\(|information_schema|insert\(|instr\(|interval\(|lcase\() [NC,OR]
+    RewriteCond %{QUERY_STRING} (union|and|\^).*(select).*(left\(|length\(|load_file\(|locate\(|lock\(|log\(|lower\(|lpad\(|ltrim\(|max\(|md5\(|mid\() [NC,OR]
+    RewriteCond %{QUERY_STRING} (union|and|\^).*(select).*(mod\(|now\(|null\(|ord\(|password\(|position\(|quote\(|rand\(|repeat\(|replace\(|reverse\() [NC,OR]
+    RewriteCond %{QUERY_STRING} (union|and|\^).*(select).*(right\(|rlike\(|row_count\(|rpad\(|rtrim\(|_set\(|schema\(|sha1\(|sha2\(|sleep\(|soundex\() [NC,OR]
+    RewriteCond %{QUERY_STRING} (union|and|\^).*(select).*(space\(|strcmp\(|substr\(|substr_index\(|substring\(|sum\(|time\(|trim\(|truncate\(|ucase\() [NC,OR]
+    RewriteCond %{QUERY_STRING} (union|and|\^).*(select).*(unhex\(|upper\(|_user\(|user\(|values\(|varchar\(|version\(|xor\() [NC,OR]
+    RewriteCond %{QUERY_STRING} ^.*(;|<|>|’|”|\)|%0A|%0D|%22|%27|%3C|%3E|%00).*(/\*|union|select|insert|cast|set|declare|drop|update|md5|benchmark).* [NC,OR]
+</IfModule>
+
 <IfModule mod_rewrite.c>
 	RemoveHandler cgi-script .pl .py .cgi
 	AddType text/plain .pl .py .cgi
